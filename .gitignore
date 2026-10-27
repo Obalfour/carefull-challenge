@@ -1,0 +1,25 @@
+.env
+*.env.local
+*accessKeys*
+credentials.csv
+*.pem
+*.key
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+*.egg-info/
+.DS_Store
+.vscode/
+.claude/
+*.code-workspace
+# LLM response cache (regenerable)
+outputs/cache/
+
+# Not ours to redistribute: the challenge brief is marked confidential, clases/ is course material
+docs/
+clases/
+code.zip
+.pytest_cache/
+notebooks/old/
