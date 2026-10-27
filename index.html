@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carefull Alert Explorer</title>
+<meta name="description" content="Results of an LLM-powered transaction alert pipeline for older adults: which users are alerted, and why.">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f6f6f9;
+  --surface: #ffffff;
+  --chart: #fcfcfb;
+  --ink: #15171f;
+  --ink-2: #4c5160;
+  --muted: #858a97;
+  --line: #e3e4ea;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --brand: #4b4acf;
+  --brand-soft: #ecebfd;
+  --alert: #d03b3b;
+  --alert-soft: #fbe9e8;
+  --alert-ink: #a82a2a;
+  --warn: #fab219;
+  --warn-edge: #a06c00;
+  --warn-soft: #fff3d6;
+  --warn-ink: #7d5500;
+  --ok-soft: #e4f4ea;
+  --ok-ink: #17703f;
+  --benign: #898781;
+  --ring: #ffffff;
+  --shadow: 0 1px 2px rgba(20, 22, 35, .06), 0 2px 8px rgba(20, 22, 35, .05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0f1014;
+    --surface: #17181d;
+    --chart: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #8f939e;
+    --line: #2a2c33;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --brand: #9b9af0;
+    --brand-soft: #23234a;
+    --alert-soft: #3a1c1c;
+    --alert-ink: #f08a8a;
+    --warn-edge: #fab219;
+    --warn-soft: #3a2e10;
+    --warn-ink: #f6c65a;
+    --ok-soft: #15301f;
+    --ok-ink: #6fd39a;
+    --ring: #1a1a19;
+    --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+a { color: var(--brand); }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+header.top { background: #4b4acf; color: #fff; }
+header.top .wrap { padding-top: 22px; padding-bottom: 22px; }
+header.top h1 { margin: 0; font-size: 1.55rem; letter-spacing: -.01em; }
+header.top p { margin: 6px 0 12px; max-width: 70ch; opacity: .92; }
+.links { display: flex; flex-wrap: wrap; gap: 8px; }
+.links a {
+  color: #fff; text-decoration: none; font-weight: 600; font-size: .9rem;
+  border: 1px solid rgba(255,255,255,.45); border-radius: 999px; padding: 4px 12px;
+}
+.links a:hover { background: rgba(255,255,255,.12); }
+
+section { margin: 22px 0; }
+h2 { font-size: 1.1rem; margin: 0 0 10px; }
+.sub { color: var(--ink-2); margin: -4px 0 12px; font-size: .92rem; }
+
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.kpi { background: var(--surface); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow); border: 1px solid var(--line); }
+.kpi .v { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+.kpi .l { color: var(--ink-2); font-size: .85rem; margin-top: 2px; }
+
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; counter-reset: s; }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: .88rem; color: var(--ink-2); }
+.step b { display: block; color: var(--ink); font-size: .92rem; }
+.step b::before { counter-increment: s; content: counter(s) ". "; color: var(--brand); }
+
+.users { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.user {
+  text-align: left; font: inherit; color: inherit; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px;
+}
+.user:hover { border-color: var(--brand); }
+.user[aria-pressed="true"] { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand); }
+.user .n { font-weight: 700; }
+.user .m { color: var(--muted); font-size: .82rem; }
+.user .p { color: var(--ink-2); font-size: .82rem; }
+
+.verdict { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-size: .8rem; padding: 2px 9px; border-radius: 999px; width: fit-content; }
+.verdict.on { background: var(--alert-soft); color: var(--alert-ink); }
+.verdict.off { background: var(--ok-soft); color: var(--ok-ink); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
+.who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+.who h3 { margin: 0; font-size: 1.25rem; }
+.bio { color: var(--ink-2); margin: 6px 0 10px; max-width: 85ch; font-size: .93rem; }
+.why { border-left: 4px solid var(--brand); background: var(--brand-soft); border-radius: 6px; padding: 8px 12px; margin: 8px 0 14px; font-size: .93rem; }
+.why.on { border-left-color: var(--alert); background: var(--alert-soft); }
+.why b { display: block; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .82rem; color: var(--ink-2); margin: 4px 0 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-box { position: relative; background: var(--chart); border-radius: 8px; border: 1px solid var(--line); }
+svg.chart { display: block; width: 100%; height: 260px; }
+svg.chart.legend-dot { display: inline-block; width: 16px; height: 16px; }
+svg.chart .grid { stroke: var(--grid); stroke-width: 1; }
+svg.chart .axis { stroke: var(--axis); stroke-width: 1; }
+svg.chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg.chart .hit { fill: transparent; cursor: pointer; }
+svg.chart .dot-alert { fill: var(--alert); stroke: var(--ring); stroke-width: 2; }
+svg.chart .dot-suspicious { fill: var(--warn); stroke: var(--warn-edge); stroke-width: 1.5; }
+svg.chart .dot-benign { fill: var(--benign); opacity: .45; }
+svg.chart .dot-cleared { fill: none; stroke: var(--benign); stroke-width: 2; }
+svg.chart .selected { stroke: var(--brand); stroke-width: 3; }
+.tip {
+  position: absolute; pointer-events: none; z-index: 5; max-width: 260px;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.18); padding: 8px 10px; font-size: .82rem; display: none;
+}
+.tip .t { font-weight: 700; }
+.tip .d { color: var(--muted); }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0 8px; }
+.chip {
+  font: inherit; font-size: .85rem; cursor: pointer; border-radius: 999px; padding: 4px 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);
+}
+.chip[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+.toggle { margin-left: auto; font-size: .85rem; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; }
+
+.tx { border-top: 1px solid var(--line); }
+.tx:first-child { border-top: 0; }
+.tx > button {
+  all: unset; box-sizing: border-box; width: 100%; cursor: pointer;
+  display: grid; grid-template-columns: 92px 1fr auto auto; gap: 10px; align-items: center; padding: 9px 4px;
+}
+.tx > button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+.tx .date { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+.tx .desc { min-width: 0; overflow-wrap: anywhere; }
+.tx .desc small { display: block; color: var(--muted); font-size: .78rem; }
+.tx .amt { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.tx .amt.in { color: var(--ok-ink); }
+.tx.open { background: color-mix(in srgb, var(--brand-soft) 45%, transparent); border-radius: 8px; }
+.detail { padding: 2px 8px 14px 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; font-size: .9rem; }
+.detail h4 { margin: 0 0 4px; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.detail ul { margin: 4px 0 0; padding-left: 18px; }
+.detail li { margin: 2px 0; }
+.detail p { margin: 0 0 6px; }
+
+.tag { display: inline-flex; align-items: center; gap: 4px; font-size: .76rem; font-weight: 700; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.tag.alert { background: var(--alert-soft); color: var(--alert-ink); }
+.tag.suspicious { background: var(--warn-soft); color: var(--warn-ink); }
+.tag.benign { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.tag.rule { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.tags { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.empty { color: var(--muted); padding: 14px 4px; }
+
+footer { color: var(--muted); font-size: .85rem; padding: 10px 0 40px; }
+
+@media (max-width: 900px) {
+  .users { grid-template-columns: repeat(3, 1fr); }
+  .kpis, .steps { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .users { grid-template-columns: 1fr 1fr; }
+  .detail { grid-template-columns: 1fr; }
+  .tx > button { grid-template-columns: 1fr auto; }
+  .tx .date { grid-column: 1 / -1; }
+  .tx .tags { grid-column: 1 / -1; justify-content: flex-start; }
+  .toggle { margin-left: 0; }
+  svg.chart { height: 220px; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1>Carefull alert pipeline: results explorer</h1>
+    <p>Rules flag transactions that look like known fraud patterns; an LLM reads each one next to the
+      user's profile and history and decides whether a trusted contact should be alerted. This page shows
+      the real output of one run on the challenge data: who gets alerted, and why.</p>
+    <nav class="links">
+      <a href="https://github.com/Obalfour/carefull-challenge/blob/main/reports/evaluation_report.pdf">Evaluation report (PDF)</a>
+      <a href="https://github.com/Obalfour/carefull-challenge/blob/main/reports/product_writeup.pdf">Product writeup (PDF)</a>
+      <a href="https://github.com/Obalfour/carefull-challenge">Source code</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <section>
+    <h2>How a transaction is judged</h2>
+    <div class="steps">
+      <div class="step"><b>Enrich</b>Parse the merchant and country; an LLM extracts who receives a transfer, and spellings like "KEVIN R" / "KEVIN RICHARDS" are merged.</div>
+      <div class="step"><b>Flag with rules</b>Money mule pass-through, amount spikes vs. the 30-day mean, and weekly overspend at new merchants. Tuned to miss nothing.</div>
+      <div class="step"><b>Validate with the LLM</b>Profile, rule evidence, established behavior and related transfers go into one prompt; the model returns risk, reasoning and confidence.</div>
+      <div class="step"><b>Decide</b>High risk alerts a trusted contact, medium means monitor, low is dismissed. Low confidence goes to a human.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Users</h2>
+    <p class="sub">Pick a user to see their transactions and the reasoning behind each decision.</p>
+    <div class="users" id="users"></div>
+  </section>
+
+  <section>
+    <div class="panel" id="panel"></div>
+  </section>
+
+  <footer class="wrap" id="footer"></footer>
+</main>
+
+<script src="data.js"></script>
+<script>
+(() => {
+  const RUN = window.RUN;
+  const $ = (sel, el = document) => el.querySelector(sel);
+  const el = (tag, attrs = {}, ...children) => {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") node.className = v;
+      else if (k === "text") node.textContent = v;
+      else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+      else node.setAttribute(k, v);
+    }
+    for (const c of children.flat()) if (c != null && c !== false) node.append(c);
+    return node;
+  };
+  const money = (x, digits = 2) => "$" + x.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  const shortDate = d => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const LABEL_TEXT = { alert: "Alert", suspicious: "Suspicious", benign: "Benign" };
+  const PATTERN_TEXT = {
+    escalating_transfers: "Escalating transfers", money_mule: "Money mule",
+    out_of_profile_spending: "Out-of-profile spending", other: "Other", none: "No pattern",
+  };
+  const tag = (label, prefix = "") => el("span", { class: `tag ${label}` },
+    label === "alert" ? "▲ " : label === "suspicious" ? "● " : "", prefix + LABEL_TEXT[label]);
+  const days = w => parseInt(w, 10);
+
+  const state = { user: RUN.users.find(u => u.alerted) || RUN.users[0], filter: "all", truth: false, open: null };
+
+  // KPIs
+  const s = RUN.stats;
+  const kpis = [
+    [`${s.usersCorrect} / ${s.users}`, "users correctly alerted or left alone"],
+    [`${s.caught} / ${s.positives}`, "labeled suspicious transactions caught"],
+    [`${s.falseAlarms}`, `false alarms after the LLM (${s.ruleFalsePositives} rule false positives removed)`],
+    [money(s.monthlyCost, 0), `LLM cost per month at ${s.monthlyVolume.toLocaleString("en-US")} transactions`],
+  ];
+  $("#kpis").append(...kpis.map(([v, l]) => el("div", { class: "kpi" }, el("div", { class: "v", text: v }), el("div", { class: "l", text: l }))));
+
+  // User cards
+  function renderUsers() {
+    const box = $("#users");
+    box.replaceChildren(...RUN.users.map(u => el("button", {
+      class: "user", "aria-pressed": String(u === state.user),
+      onclick: () => { state.user = u; state.open = null; state.filter = "all"; render(); },
+    },
+      el("span", { class: "n", text: u.name }),
+      el("span", { class: "m", text: `${u.age} · ${u.location}` }),
+      el("span", { class: `verdict ${u.alerted ? "on" : "off"}` }, u.alerted ? "▲ Alert" : "✓ No alert"),
+      el("span", { class: "p", text: u.alerted ? u.patterns.map(p => PATTERN_TEXT[p]).join(", ") : "Unusual activity explained by profile" }),
+    )));
+  }
+
+  function ruleLines(t) {
+    const d = RUN.detection, out = [];
+    if (t.rules.mule) {
+      const m = t.rules.mule;
+      out.push(`Money mule: ${m.role} leg of a pair with ${m.partner}; ${Math.round(m.ratio * 100)}% of the credit left within ${m.hours} h.`);
+    }
+    if (t.rules.spike) {
+      const sp = t.rules.spike;
+      out.push(`Amount spike: ${sp.ratio}× the mean of the previous ${days(d.rolling_window)} days of debits (${money(sp.rollingMean)})` +
+        (sp.label === "alert" ? `; another spike in the previous ${days(d.escalation_lookback)} days.` : "."));
+    }
+    if (t.rules.weekly) {
+      const w = t.rules.weekly;
+      out.push(`Weekly overspend: ${money(w.spend, 0)} in the week of ${shortDate(w.weekStart)} vs. ${money(w.baseline, 0)} average over the previous ${d.weekly_baseline_weeks} weeks; first purchase at this merchant.`);
+    }
+    return out;
+  }
+  const ruleChips = t => [
+    t.rules.mule && el("span", { class: "tag rule", text: "mule" }),
+    t.rules.spike && el("span", { class: "tag rule", text: "spike" }),
+    t.rules.weekly && el("span", { class: "tag rule", text: "weekly" }),
+  ];
+
+  // Chart: one dot per transaction, date x amount (log). Color = final label; ring = flagged by rules, cleared by LLM.
+  function renderChart(container, txns) {
+    const W = Math.max(container.clientWidth, 280), H = container.clientWidth < 600 ? 220 : 260;
+    const m = { l: 46, r: 12, t: 12, b: 26 };
+    const t0 = new Date(RUN.users.flatMap(u => u.transactions.map(t => t.date)).sort()[0]).getTime();
+    const t1 = new Date(RUN.users.flatMap(u => u.transactions.map(t => t.date)).sort().at(-1)).getTime();
+    const x = d => m.l + (new Date(d).getTime() - t0) / (t1 - t0) * (W - m.l - m.r);
+    const lo = Math.log10(10), hi = Math.log10(10000);
+    const y = v => m.t + (1 - (Math.log10(Math.max(v, 10)) - lo) / (hi - lo)) * (H - m.t - m.b);
+    const NS = "http://www.w3.org/2000/svg";
+    const s = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+    const svg = s("svg", { class: "chart", viewBox: `0 0 ${W} ${H}`, role: "img",
+      "aria-label": `Transactions of ${state.user.name} by date and amount; the list below has the same data.` });
+
+    for (const v of [10, 100, 1000, 10000]) {
+      svg.append(s("line", { class: "grid", x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }));
+      const label = s("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end" });
+      label.textContent = v >= 1000 ? `$${v / 1000}k` : `$${v}`;
+      svg.append(label);
+    }
+    svg.append(s("line", { class: "axis", x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b }));
+    const start = new Date(t0);
+    for (let mo = 0; mo < 5; mo++) {
+      const d = new Date(start.getFullYear(), start.getMonth() + mo, 1);
+      if (d.getTime() < t0 || d.getTime() > t1) continue;
+      const label = s("text", { x: x(d), y: H - 8, "text-anchor": "middle" });
+      label.textContent = d.toLocaleDateString("en-US", { month: "short" });
+      svg.append(label);
+    }
+
+    const tip = $(".tip", container);
+    const order = { benign: 0, suspicious: 1, alert: 2 };
+    const sorted = [...txns].sort((a, b) => order[a.finalLabel] - order[b.finalLabel] || (a.ruleLabel !== "benign") - (b.ruleLabel !== "benign"));
+    for (const t of sorted) {
+      const cx = x(t.date), cy = y(t.amount);
+      const cleared = t.finalLabel === "benign" && t.ruleLabel !== "benign";
+      const cls = t.finalLabel !== "benign" ? `dot-${t.finalLabel}` : cleared ? "dot-cleared" : "dot-benign";
+      const r = t.finalLabel !== "benign" ? 6 : cleared ? 5 : 3.5;
+      const dot = s("circle", { cx, cy, r, class: cls + (state.open === t.id ? " selected" : "") });
+      const hit = s("circle", { cx, cy, r: 11, class: "hit", tabindex: 0, "aria-label": `${shortDate(t.date)} ${t.description} ${money(t.amount)}` });
+      const show = () => {
+        tip.replaceChildren(
+          el("div", { class: "t", text: `${t.type === "credit" ? "+" : ""}${money(t.amount)} · ${t.description}` }),
+          el("div", { class: "d", text: `${shortDate(t.date)} · ${t.category}` }),
+          el("div", {}, t.finalLabel !== "benign" ? tag(t.finalLabel) : cleared ? "Flagged by rules, cleared by the LLM" : "Not flagged"),
+        );
+        tip.style.display = "block";
+        const left = Math.min(cx + 12, W - 270);
+        tip.style.left = `${Math.max(left, 4)}px`;
+        tip.style.top = `${Math.max(cy - 10, 4)}px`;
+      };
+      const hide = () => { tip.style.display = "none"; };
+      hit.addEventListener("mouseenter", show); hit.addEventListener("focus", show);
+      hit.addEventListener("mouseleave", hide); hit.addEventListener("blur", hide);
+      hit.addEventListener("click", () => openTx(t.id));
+      svg.append(dot, hit);
+    }
+    container.querySelector("svg")?.remove();
+    container.prepend(svg);
+  }
+
+  function openTx(id) {
+    state.open = state.open === id ? null : id;
+    const t = state.user.transactions.find(x => x.id === id);
+    if (state.open && t && !matches(t)) state.filter = "all";
+    render();
+    if (state.open) document.getElementById(`tx-${id}`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  const FILTERS = [
+    ["all", "All"], ["rules", "Flagged by rules"], ["final", "Alert or suspicious"], ["cleared", "Cleared by the LLM"],
+  ];
+  const matches = (t, filter = state.filter) => filter === "all" ||
+    (filter === "rules" && t.ruleLabel !== "benign") ||
+    (filter === "final" && t.finalLabel !== "benign") ||
+    (filter === "cleared" && t.ruleLabel !== "benign" && t.finalLabel === "benign");
+
+  function detail(t) {
+    const left = el("div", {},
+      el("h4", { text: "Why the rules flagged it" }),
+      t.ruleLabel === "benign" ? el("p", { text: "No rule fired: the LLM never saw this transaction." })
+        : el("ul", {}, ruleLines(t).map(l => el("li", { text: l }))),
+      t.counterparty ? el("p", { text: `Counterparty: ${t.counterparty} (${t.counterpartyType})` }) : null,
+      t.country ? el("p", { text: `Country: ${t.country}` }) : null,
+      state.truth ? el("p", {}, "Ground truth: ", tag(t.truth), t.truthType ? ` (${t.truthType.replaceAll("_", " ")})` : "") : null,
+    );
+    const right = el("div", {}, el("h4", { text: "LLM verdict" }));
+    if (!t.llm) right.append(el("p", { text: "Not sent to the LLM." }));
+    else {
+      right.append(
+        el("p", {}, el("b", { text: `${t.llm.risk} risk` }), ` · confidence ${t.llm.confidence.toFixed(2)} · ${PATTERN_TEXT[t.llm.pattern]} · ${t.llm.action.replaceAll("_", " ")}`),
+        el("p", { text: t.llm.summary }),
+        t.llm.evidenceFor.length ? el("div", {}, el("h4", { text: "Evidence for risk" }), el("ul", {}, t.llm.evidenceFor.map(e => el("li", { text: e })))) : null,
+        t.llm.evidenceAgainst.length ? el("div", {}, el("h4", { text: "Evidence against risk" }), el("ul", {}, t.llm.evidenceAgainst.map(e => el("li", { text: e })))) : null,
+      );
+    }
+    return el("div", { class: "detail" }, left, right);
+  }
+
+  function render() {
+    renderUsers();
+    const u = state.user;
+    const panel = $("#panel");
+    const txns = u.transactions.filter(t => matches(t));
+    const chartBox = el("div", { class: "chart-box" }, el("div", { class: "tip" }));
+
+    panel.replaceChildren(
+      el("div", { class: "who" },
+        el("h3", { text: u.name }),
+        el("span", { class: `verdict ${u.alerted ? "on" : "off"}` }, u.alerted ? `▲ Trusted contact alerted · ${u.nAlert} transactions · ${money(u.amountAtRisk, 0)} at risk` : "✓ No alert"),
+      ),
+      el("p", { class: "bio", text: `${u.age}, ${u.occupation}, ${u.location}, ${money(u.income, 0)}/month. ${u.bio}` }),
+      el("div", { class: `why ${u.alerted ? "on" : ""}` },
+        el("b", { text: u.alerted ? "Why this user is alerted" : "Why there is no alert" }),
+        u.alerted ? u.topReason
+          : `The rules flagged ${u.transactions.filter(t => t.ruleLabel !== "benign").length} of this user's transactions; the LLM cleared all of them using the profile and history. Open them with the "Cleared by the LLM" filter.`),
+      el("div", { class: "legend" },
+        el("span", {}, svgDot("dot-alert", 6), "Alert"),
+        el("span", {}, svgDot("dot-suspicious", 6), "Suspicious"),
+        el("span", {}, svgDot("dot-cleared", 5), "Flagged by rules, cleared by the LLM"),
+        el("span", {}, svgDot("dot-benign", 3.5), "Not flagged"),
+      ),
+      chartBox,
+      el("div", { class: "toolbar" },
+        FILTERS.map(([k, label]) => el("button", {
+          class: "chip", "aria-pressed": String(state.filter === k),
+          onclick: () => { state.filter = k; render(); },
+        }, `${label} (${u.transactions.filter(t => matches(t, k)).length})`)),
+        el("label", { class: "toggle" },
+          el("input", { type: "checkbox", ...(state.truth ? { checked: "" } : {}), onchange: e => { state.truth = e.target.checked; render(); } }),
+          "Show ground truth"),
+      ),
+      el("div", { class: "list" },
+        txns.length ? txns.map(t => el("div", { class: `tx ${state.open === t.id ? "open" : ""}`, id: `tx-${t.id}` },
+          el("button", { "aria-expanded": String(state.open === t.id), onclick: () => openTx(t.id) },
+            el("span", { class: "date", text: new Date(t.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) }),
+            el("span", { class: "desc" }, t.description, el("small", { text: [t.category, t.counterparty].filter(Boolean).join(" · ") })),
+            el("span", { class: `amt ${t.type === "credit" ? "in" : ""}`, text: (t.type === "credit" ? "+" : "−") + money(t.amount) }),
+            el("span", { class: "tags" }, ruleChips(t), t.finalLabel !== "benign" ? tag(t.finalLabel)
+              : t.ruleLabel !== "benign" ? el("span", { class: "tag benign", text: "cleared" }) : null,
+              state.truth && t.truth !== "benign" ? tag(t.truth, "truth: ") : null),
+          ),
+          state.open === t.id ? detail(t) : null,
+        )) : el("div", { class: "empty", text: "No transactions match this filter." }),
+      ),
+    );
+    requestAnimationFrame(() => renderChart(chartBox, u.transactions));
+  }
+
+  function svgDot(cls, r) {
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("width", 16); svg.setAttribute("height", 16); svg.setAttribute("class", "chart legend-dot");
+    const c = document.createElementNS(NS, "circle");
+    c.setAttribute("cx", 8); c.setAttribute("cy", 8); c.setAttribute("r", r); c.setAttribute("class", cls);
+    svg.append(c);
+    return svg;
+  }
+
+  $("#footer").textContent = `Precomputed run of ${RUN.model} on ${RUN.runDate}: nothing runs live and no API key is involved. ` +
+    `Thresholds were tuned on this same labeled data, so the scores are optimistic; see the evaluation report for the caveats.`;
+
+  let resizeTimer;
+  window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => renderChart($(".chart-box"), state.user.transactions), 120); });
+  render();
+})();
+</script>
+</body>
+</html>
