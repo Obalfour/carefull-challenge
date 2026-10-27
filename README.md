@@ -1,5 +1,8 @@
 # Carefull challenge: LLM-powered transaction alert pipeline
 
+**Live demo: [obalfour.github.io/carefull-challenge](https://obalfour.github.io/carefull-challenge/)**, a results explorer for the last run: who is alerted, each transaction on a timeline, and the LLM's
+reasoning behind every decision. It is a static page; nothing runs live and no API key is involved.
+
 A pipeline that reads bank transactions of older adults, enriches them, flags suspicious activity with
 rules and validates every flag with an LLM that sees the user's profile and history. It answers
 **which users should be alerted, and why**.
@@ -157,6 +160,25 @@ docker run --rm --env-file .env -v "$(pwd)/outputs:/app/outputs" carefull python
 docker run --rm -v "$(pwd)/outputs:/app/outputs" -v "$(pwd)/reports:/app/reports" carefull python evaluate.py
 ```
 
+## Live demo
+
+`site/` is a static page (plain HTML and JavaScript, no build step) published with GitHub Pages
+from the `gh-pages` branch. Regenerate its data after a new run and preview it locally:
+
+```bash
+python build_site.py
+```
+
+```bash
+python -m http.server 8000 --directory site
+```
+
+Then open http://localhost:8000. To publish, push the folder to `gh-pages`:
+
+```bash
+git subtree push --prefix site origin gh-pages
+```
+
 ### Outputs
 
 | Path | Content |
@@ -185,6 +207,8 @@ run_pipeline.py   CLI to run the pipeline
 check_rules.py    CLI to test rule thresholds against the ground truth, without the LLM
 evaluate.py       CLI to build the evaluation report
 build_pdf.py      CLI to print an HTML report to PDF
+build_site.py     exports a run to the live demo in site/
+site/             the live demo (static results explorer)
 tests/            pytest suite (no API calls)
 Dockerfile        container that runs the tests or any of the CLIs
 .env.example      every configurable setting with its default
