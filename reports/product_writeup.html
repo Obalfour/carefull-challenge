@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Product writeup</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="doc">
+  <h1>Product writeup</h1>
+  <div class="sub">Carefull transaction alert pipeline &middot; how I approached the problem, what I traded off, and what I would build next</div>
+</header>
+
+<div class="callout"><div class="title">The idea in one paragraph</div>
+  The data showed that "suspicious" depends on who the person is: a $2,000 Zelle payment is routine for one user and
+  an emergency for another. So the system has two halves. <b>Cheap, transparent rules</b> look for the shape of each
+  fraud pattern and are tuned to miss nothing. <b>An LLM reads each flagged transaction</b> next to the user's
+  profile and history and decides whether it is genuinely concerning, explains why in words a caregiver can
+  understand, and says how sure it is.
+</div>
+
+<h2>1. What the data told me (notebooks)</h2>
+<div class="two-col">
+<div>
+<ul>
+  <li><b>Three real incidents, two decoys.</b> Margaret sends growing amounts to a new payee, Dorothy forwards
+  ~94&ndash;95% of large deposits from unknown companies within ~30 h, and Helen's card suddenly shows nightlife
+  and luxury hotels in Spain, Thailand and the UAE. Robert (golf, London trips, $2,000 a month to his wife) and
+  Frank (gifts to grandchildren) look unusual but are labeled benign.</li>
+  <li><b>Size relative to the person separates well.</b> Benign debits have a median of ~2.5% of monthly income
+  (max ~40%); alerts a median of ~27% (up to ~270%).</li>
+</ul>
+</div>
+<div>
+<ul>
+  <li><b>Generic anomaly detection is noisy.</b> A 7-day rolling baseline highlighted 78 days, only 17 with a real
+  alert, and still flagged 20 days for Robert and 16 for Frank, who have none.</li>
+  <li><b>Recipients need cleaning before they can be counted.</b> The same person appears as <code>KEVIN R</code>,
+  <code>KEVIN RICH</code> and <code>KEVIN RICHARDS</code>; 37 transfers held 13 spellings of 8 people.
+  Without that, "new payee with growing amounts" is invisible.</li>
+</ul>
+</div>
+</div>
+
+<h2>2. Detection approaches I considered</h2>
+<table>
+  <thead><tr><th>Approach</th><th>Verdict</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Z-score over all of a user's amounts</td><td><span class="tag alert">dropped</span></td>
+        <td>Pensions and deposits inflate the mean and deviation; the baseline is not "spending".</td></tr>
+    <tr><td>Generic rolling-baseline anomaly on daily spend</td><td><span class="tag suspicious">signal only</span></td>
+        <td>Catches spikes but cannot tell a trip from a stolen card; kept as one input, not a detector.</td></tr>
+    <tr><td>LLM on every transaction</td><td><span class="tag alert">dropped</span></td>
+        <td>Pays for 290 calls to confirm groceries, and is harder to audit than explicit rules.</td></tr>
+    <tr class="highlight"><td>Pattern rules for recall + LLM with context for precision</td><td><span class="tag benign">chosen</span></td>
+        <td>Each rule encodes one fraud shape seen in the data; the LLM supplies the judgment the rules lack.</td></tr>
+  </tbody>
+</table>
+<table>
+  <thead><tr><th>Pattern</th><th>Rule (from the notebooks)</th><th>What the LLM adds</th></tr></thead>
+  <tbody>
+    <tr><td><b>Escalating transfers</b></td><td>Debit &gt; 1.5&times; the 30-day rolling mean; a second spike within 7 days escalates.</td>
+        <td>Sees <b>every transfer to the same (alias-resolved) recipient</b>, so it can judge the trend and whether the payee is family.</td></tr>
+    <tr><td><b>Money mule</b></td><td>Credit followed within 72 h by an outgoing transfer of 85&ndash;100% of it.</td>
+        <td>Knows the sender is a business with no history and the recipient is a stranger.</td></tr>
+    <tr><td><b>Out-of-profile spending</b></td><td>Week &gt; 1.5&times; the 4-week average, only at merchants never used before.</td>
+        <td>Compares country, category and lifestyle with the biography ("travels frequently" vs. "lives independently, book club").</td></tr>
+  </tbody>
+</table>
+
+<h2>3. How I handled false positives</h2>
+<div class="kpis">
+  <div class="kpi"><div class="value">159 &rarr; 70</div><div class="label">rule flags after fixing the weekly rule, with no recall loss</div></div>
+  <div class="kpi good"><div class="value">38 &rarr; 0</div><div class="label">false positives after LLM validation</div></div>
+  <div class="kpi good"><div class="value">0</div><div class="label">real cases dismissed by the LLM</div></div>
+  <div class="kpi"><div class="value">2 / 2</div><div class="label">decoy users (Robert, Frank) left alone</div></div>
+</div>
+<ul>
+  <li><b>Fix false positives at the source first.</b> My first weekly rule flagged every debit in an expensive week,
+  including the usual grocery store: 146 flags, 122 benign. Limiting it to first-time merchants removed most of them.
+  <code>check_rules.py</code> makes this loop fast: change a threshold in <code>.env</code>, see true and false positives per rule, no API calls.</li>
+  <li><b>Give the LLM the person, not just the transaction.</b> The prompt carries the full profile, the rule
+  evidence with numbers, the user's established behavior and the pattern-specific history. The "established
+  behavior" window stops 30 days before the transaction, so an ongoing incident (Helen's trip) cannot become the
+  baseline that excuses itself.</li>
+  <li><b>Make it argue both sides.</b> The output schema asks for evidence <i>for</i> and <i>against</i> risk before
+  the verdict. That is what lets it say "the $2,000 to Patricia Chen is to his wife, who manages household
+  expenses" instead of reacting to the amount.</li>
+  <li><b>Never drop uncertainty silently.</b> Confidence below 0.6 becomes "suspicious + human review"; if the LLM
+  fails, the rule label is kept and reviewed. A missed alert costs more than a review.</li>
+</ul>
+
+<h2>4. Tradeoffs I made</h2>
+<table>
+  <thead><tr><th>Decision</th><th>What I gained</th><th>What I gave up</th></tr></thead>
+  <tbody>
+    <tr><td>Rules tuned for recall, LLM for precision</td><td>Every case reaches the LLM; rules stay simple and auditable.</td>
+        <td>The LLM can only judge what the rules flag: rule recall is the ceiling.</td></tr>
+    <tr><td>One LLM call per flagged transaction</td><td>Simple, per-transaction labels to evaluate and explain.</td>
+        <td>Helen's 12 purchases cost 12 calls for one story; pattern-level calls would be cheaper.</td></tr>
+    <tr><td><code>gemini-3.1-flash-lite</code></td><td>~$11/month at 50k transactions, 2.6 s median latency, no errors here.</td>
+        <td>Not compared yet against a larger model (free-tier quota); untested on harder, ambiguous cases.</td></tr>
+    <tr><td>Calendar-week totals for the weekly rule</td><td>Matches how I explored the data; easy to explain.</td>
+        <td>Can fire up to 7 days late. Production needs a rolling 7-day window.</td></tr>
+    <tr><td>Thresholds chosen on the labeled data</td><td>Fast iteration with 5 users and 32 positives.</td>
+        <td>No held-out set: the perfect score is optimistic, not a forecast.</td></tr>
+  </tbody>
+</table>
+
+<h2>5. Product considerations</h2>
+<ul>
+  <li><b>Escalate gradually, respect autonomy.</b> The LLM rated Margaret's first $200 payment to Kevin "medium:
+  monitor" and moved to "high: alert" as the amounts grew. In the product, "medium" should mean a gentle check-in
+  with the user, and only "high" should reach the adult children. Alerting on the first payment would feel
+  patronizing; waiting until $2,000 would be too late.</li>
+  <li><b>The explanation is the product.</b> Each alert carries a one- or two-sentence summary written for a
+  caregiver ("deposit from an unknown business, almost immediately forwarded to an unfamiliar person") plus the
+  evidence. A caregiver needs to know what to ask, not a risk score.</li>
+  <li><b>Group alerts by incident.</b> Dorothy has 12 alerting transactions but one story. Caregivers should get one
+  message per incident, updated as it develops.</li>
+  <li><b>Profiles are a feature.</b> The biography is what clears Robert and Frank. Onboarding should collect who
+  the user regularly pays (family, caregivers, contractors) and planned travel.</li>
+</ul>
+
+<h2>6. What I would build next</h2>
+<div class="two-col">
+<div>
+<h3>Evaluation</h3>
+<ul>
+  <li>A held-out set: synthetic users and scenarios generated from the same patterns, plus hard negatives (a
+  user who really does start paying a new contractor more each week).</li>
+  <li>Run the comparison with <code>gemini-3.8-flash</code> and a non-Google model on those harder cases, where
+  models would actually differ.</li>
+  <li>Check whether LLM confidence is calibrated, and tune the review threshold on data with real ambiguity.</li>
+</ul>
+</div>
+<div>
+<h3>System</h3>
+<ul>
+  <li>Streaming with rolling windows, and pattern-level validation (one call per incident, updated as it grows).</li>
+  <li>More patterns: new payee + wire + urgency, gift cards and crypto ATMs, sudden changes in login or contact data.</li>
+  <li>Orchestrate the steps with LangGraph, add Batch API and prompt caching, and log prompts and verdicts so
+  caregiver feedback becomes labeled data.</li>
+</ul>
+</div>
+</div>
+
+</body>
+</html>

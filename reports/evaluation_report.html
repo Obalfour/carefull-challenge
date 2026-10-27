@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Evaluation report</title>
+<link rel="stylesheet" href="style.css"></head>
+<body>
+    <header class="doc">
+      <h1>Evaluation report</h1>
+      <div class="sub">Carefull transaction alert pipeline &middot; model <code>gemini-3.1-flash-lite</code> &middot;
+      291 transactions, 5 users, Jul&ndash;Oct 2024
+      &middot; generated 2026-10-21</div>
+    </header>
+
+    <div class="callout good"><div class="title">Bottom line</div>
+      The system alerts exactly the three users who are being victimized
+      (Margaret Thompson, Dorothy Williams, Helen Park) and none of the two users with legitimately high or unusual
+      spending. Cheap rules find every case (recall 100%) but also flag
+      38 benign transactions; the LLM, reading each user's profile and history, removes them.
+    </div>
+    
+    <div class="kpis">
+      <div class="kpi good"><div class="value">5 / 5</div><div class="label">users classified correctly (alert / no alert)</div></div>
+      <div class="kpi good"><div class="value">32 / 32</div><div class="label">suspicious transactions caught (100% recall)</div></div>
+      <div class="kpi good"><div class="value">0</div><div class="label">false alarms after LLM validation (38 of 38 rule false positives removed)</div></div>
+      <div class="kpi"><div class="value">$11</div><div class="label">estimated LLM cost per month at 50,000 transactions</div></div>
+    </div>
+    
+    <div class="funnel">
+      <div class="step"><div class="n">291</div><div class="t">transactions</div></div>
+      <div class="step"><div class="n">70</div><div class="t">flagged by rules (24%)</div></div>
+      <div class="step"><div class="n">32</div><div class="t">confirmed by the LLM</div></div>
+      <div class="step"><div class="n">3</div><div class="t">users alerted</div></div>
+    </div>
+    <div class="callout warn"><div class="title">Read these numbers with caution</div>
+      There is no held-out data. Rule thresholds were chosen against these same labels and the prompts were
+      written after exploring these same five users. 32 positives come from only 3 incidents, so one
+      error moves recall by ~3 points. The result shows the design works on these patterns, not how it generalizes.
+    </div>
+
+    <h2>Classification metrics</h2>
+    <p class="small"><b>Flagged</b> = suspicious or alert (anything a human should look at).
+    <b>Alert</b> = only the class that notifies a trusted contact.</p>
+    <table><thead><tr><th class="">Stage</th><th class="num">Flagged P</th><th class="num">Flagged R</th><th class="num">Flagged F1</th><th class="num">Alert P</th><th class="num">Alert R</th><th class="num">Alert F1</th><th class="num">Accuracy</th></tr></thead><tbody><tr class="muted"><td class=""><b>Rules only</b></td><td class="num">0.46</td><td class="num">1.00</td><td class="num">0.63</td><td class="num">0.57</td><td class="num">0.93</td><td class="num">0.71</td><td class="num">0.86</td></tr><tr class="highlight"><td class=""><b>Rules + LLM</b></td><td class="num">1.00</td><td class="num">1.00</td><td class="num">1.00</td><td class="num">1.00</td><td class="num">1.00</td><td class="num">1.00</td><td class="num">1.00</td></tr></tbody></table>
+    <div class="figure"><img src="figures/confusion_gemini-3.1-flash-lite.png" style="width:64%"><div class="caption">Confusion matrices: rows = ground truth, columns = prediction.</div></div>
+    
+    <h2>Error analysis</h2>
+    <h3>Where the rule errors come from</h3>
+    <div class="two-col">
+      <div><table><thead><tr><th class="">Rule</th><th class="num">Flagged</th><th class="num">True pos.</th><th class="num">False pos.</th><th class="num">Precision</th><th class="num">FP cleared by LLM</th></tr></thead><tbody><tr><td class="">Money mule</td><td class="num">12</td><td class="num">12</td><td class="num">0</td><td class="num">100%</td><td class="num">0</td></tr><tr><td class="">Amount spike</td><td class="num">51</td><td class="num">21</td><td class="num">30</td><td class="num">41%</td><td class="num">30</td></tr><tr><td class="">Weekly overspend</td><td class="num">37</td><td class="num">21</td><td class="num">16</td><td class="num">57%</td><td class="num">16</td></tr></tbody></table></div>
+      <div><table><thead><tr><th class="">User</th><th class="num">Rule FPs</th><th class="">Main categories</th></tr></thead><tbody><tr><td class="">Robert Chen</td><td class="num">13</td><td class="">travel (7), transfer (4), shopping (1)</td></tr><tr><td class="">Frank Martinez</td><td class="num">11</td><td class="">financial_services (5), transfer (4), groceries (1)</td></tr><tr><td class="">Margaret Thompson</td><td class="num">5</td><td class="">utilities (2), groceries (2), dining (1)</td></tr><tr><td class="">Helen Park</td><td class="num">5</td><td class="">housing (3), shopping (2)</td></tr><tr><td class="">Dorothy Williams</td><td class="num">4</td><td class="">utilities (3), personal_care (1)</td></tr></tbody></table></div>
+    </div>
+    <div class="callout"><div class="title">The errors are systematic, not random</div>
+      Most rule false positives belong to <b>Robert Chen</b> and
+      <b>Frank Martinez</b>: active users whose spending is
+      high and variable by design (travel, golf, monthly transfers to family). Amount-based rules cannot tell
+      "unusual for a statistic" from "unusual for this person"; the profile can. The money-mule rule is the
+      only one that is precise on its own.
+    </div>
+    <h3>How the LLM removed them</h3>
+    <ul><li><b>Robert Chen</b> &ndash; BRITISH AIRWAYS PNR XKJD92 ($2,340, Amount spike, Weekly overspend): <span class="quote">&ldquo;The transaction is a large travel expense, but it is consistent with the user&#x27;s stated lifestyle of frequent travel and is supported by recent evidence of international activity (an Uber trip in London).&rdquo;</span></li><li><b>Helen Park</b> &ndash; IKEA PORTLAND OR ($580, Amount spike): <span class="quote">&ldquo;The transaction at IKEA is consistent with the user&#x27;s recent move to a new condo and her established shopping history in Portland. The amount is reasonable for home furnishings and does not indicate fraud.&rdquo;</span></li><li><b>Frank Martinez</b> &ndash; ZELLE TO ISABELLA MARTINEZ ($500, Amount spike): <span class="quote">&ldquo;While the $500 transfer to Isabella Martinez is larger than usual, it is consistent with Frank&#x27;s established behavior of being generous with his family. Given his stable pension income, this is likely a planned gift rather than fraudulent activity.&rdquo;</span></li></ul>
+
+    <h3>Severity: the LLM escalates as evidence accumulates</h3>
+    <p class="small">Transfers to a new payee. The rules get the severity wrong on 4 of
+    8; after validation, 0 remain. The LLM treats the first payment as something to
+    monitor and escalates to an alert once the amounts keep growing.</p>
+    <table><thead><tr><th class="">Date</th><th class="num">Amount</th><th class="">Description</th><th class="">Rules</th><th class="">LLM risk (conf.)</th><th class="">Final</th><th class="">Truth</th></tr></thead><tbody><tr><td class="">Sep 05</td><td class="num">$200</td><td class="">ZELLE PAYMENT TO KEVIN R</td><td class=""><span class="tag alert">alert</span></td><td class="">medium (0.70)</td><td class=""><span class="tag suspicious">suspicious</span></td><td class=""><span class="tag suspicious">suspicious</span></td></tr><tr><td class="">Sep 12</td><td class="num">$350</td><td class="">ZELLE TO KEVIN RICHARDS</td><td class=""><span class="tag alert">alert</span></td><td class="">medium (0.80)</td><td class=""><span class="tag suspicious">suspicious</span></td><td class=""><span class="tag suspicious">suspicious</span></td></tr><tr><td class="">Sep 18</td><td class="num">$500</td><td class="">ZELLE PAYMENT TO KEVIN RICH</td><td class=""><span class="tag alert">alert</span></td><td class="">high (0.90)</td><td class=""><span class="tag alert">alert</span></td><td class=""><span class="tag alert">alert</span></td></tr><tr><td class="">Sep 25</td><td class="num">$750</td><td class="">ZELLE TRANSFER KEVIN RICHARDS</td><td class=""><span class="tag alert">alert</span></td><td class="">high (0.95)</td><td class=""><span class="tag alert">alert</span></td><td class=""><span class="tag alert">alert</span></td></tr><tr><td class="">Oct 02</td><td class="num">$1,000</td><td class="">ZELLE PMT TO KEVIN R</td><td class=""><span class="tag alert">alert</span></td><td class="">high (0.90)</td><td class=""><span class="tag alert">alert</span></td><td class=""><span class="tag alert">alert</span></td></tr><tr><td class="">Oct 08</td><td class="num">$1,500</td><td class="">ZELLE PAYMENT KEVIN RICHARDS</td><td class=""><span class="tag alert">alert</span></td><td class="">high (0.95)</td><td class=""><span class="tag alert">alert</span></td><td class=""><span class="tag alert">alert</span></td></tr><tr><td class="">Oct 15</td><td class="num">$2,000</td><td class="">ZELLE TO KEVIN RICHARDS</td><td class=""><span class="tag suspicious">suspicious</span></td><td class="">high (0.95)</td><td class=""><span class="tag alert">alert</span></td><td class=""><span class="tag alert">alert</span></td></tr><tr><td class="">Oct 22</td><td class="num">$1,200</td><td class="">WIRE TRANSFER TO KEVIN RICHARDS</td><td class=""><span class="tag suspicious">suspicious</span></td><td class="">high (0.95)</td><td class=""><span class="tag alert">alert</span></td><td class=""><span class="tag alert">alert</span></td></tr></tbody></table>
+
+    <h3>Remaining errors after validation</h3>
+    <div class="callout good"><div class="title">No remaining errors</div>No false negatives and no false positives after validation, and the alert / suspicious severity matches the ground truth on every flagged transaction.</div>
+
+    <h3>Confidence and uncertainty handling</h3>
+    <ul>
+      <li>LLM confidence ranged from 0.70 to 1.00
+      (median 0.95); 0 transactions went to human review.</li>
+      <li>Because every validated decision was correct, this data <b>cannot tell whether confidence is
+      calibrated</b>. The low-confidence path (&lt; threshold &rarr; suspicious + human review) and the
+      LLM-failure fallback (keep the rule label + review) were not exercised by real cases here.</li>
+    </ul>
+
+    <h3>What could fail on new data</h3>
+    <ul>
+      <li><b>Rule recall is the ceiling.</b> The LLM only sees what rules flag. A slow exploitation with flat
+      amounts (e.g. $300 every week) would not trip the spike rule.</li>
+      <li><b>Weekly rule latency.</b> It uses the calendar week's total, so it fires up to 7 days late;
+      a rolling 7-day window is needed in production.</li>
+      <li><b>Alias resolution is permissive.</b> The "same initial" rule would merge Marco and Maria Martinez.</li>
+      <li><b>Biographies help a lot.</b> "Wife Patricia manages household expenses" explains Robert's transfers.
+      Users with thin profiles will produce more false alarms.</li>
+    </ul>
+    
+    <h2>Model comparison</h2>
+    <table><thead><tr><th class="">Model</th><th class="">Status</th><th class="">Flagged F1</th><th class="">Alert F1</th><th class="num">Latency p50</th><th class="num">Latency p95</th><th class="num">Run cost</th><th class="num">Monthly (50k tx)</th></tr></thead><tbody><tr class="highlight"><td class=""><b>gemini-3.1-flash-lite</b></td><td class="">measured</td><td class="">1.00</td><td class="">1.00</td><td class="num">2.6 s</td><td class="num">17.7 s</td><td class="num">$0.064</td><td class="num">$11</td></tr><tr class="muted"><td class="">gemini-3.8-flash</td><td class="">estimated*</td><td class="">not run</td><td class="">not run</td><td class="num">-</td><td class="num">-</td><td class="num">$0.179</td><td class="num">$31</td></tr></tbody></table>
+    <p class="small">* Not run: on the free tier <code>gemini-3.8-flash</code> allows 20 requests/day and one run
+    needs 94. The estimate applies its price to the tokens measured with
+    <code>gemini-3.1-flash-lite</code>; it would be higher if the model spends thinking tokens. p95 latency is
+    inflated by free-tier rate-limit retries; the median is representative of a single call.</p>
+    <div class="callout"><div class="title">Model choice</div>
+      Validation is a reading-comprehension task over ~2k tokens of structured context, and the lite model
+      already makes no errors here, so a bigger model can only add cost and latency on this data. A larger
+      model is worth testing on harder, ambiguous cases (thin profiles, partial patterns), where the
+      comparison would actually discriminate.
+    </div>
+
+    <h2>Cost projection</h2>
+    <div class="kpis">
+      <div class="kpi"><div class="value">$0.0009</div><div class="label">per validation call</div></div>
+      <div class="kpi"><div class="value">$0.00022</div><div class="label">per transaction (all steps)</div></div>
+      <div class="kpi"><div class="value">$11.07</div><div class="label">per month at 50,000 tx (real time)</div></div>
+      <div class="kpi good"><div class="value">$5.54</div><div class="label">per month with Batch API</div></div>
+    </div>
+    <table><thead><tr><th class="">LLM step</th><th class="num">Calls</th><th class="">Avg tokens in / out</th><th class="num">Cost per call</th><th class="">When</th></tr></thead><tbody><tr><td class="">Counterparty extraction</td><td class="num">24</td><td class="">426 / 28</td><td class="num">$0.00015</td><td class="">once per unique description (cached)</td></tr><tr><td class="">Risk validation</td><td class="num">70</td><td class="">1,953 / 254</td><td class="num">$0.00087</td><td class="">once per rule-flagged transaction</td></tr></tbody></table>
+    <p>Cost scales with how many transactions the rules flag, not with total volume: only
+    24% of transactions reach the validation step. Monthly cost at other flag rates:
+    5% &rarr; <b>$2.79</b>, 10% &rarr; <b>$4.96</b>. <span class="small">Prices: Gemini API standard tier, October 2026.</span></p>
+    <h3>Where to optimize</h3>
+    <ul>
+      <li><b>Lower the flag rate first.</b> 38 of 70 validations were benign. Tightening the rules
+      (as with the weekly rule: 159 &rarr; 70 flags with no recall loss) saves more than any model change.</li>
+      <li><b>One call per incident, not per transaction.</b> Helen's 12 foreign purchases are one story; validating
+      the pattern once would cut those calls by ~10x.</li>
+      <li><b>Batch API</b> for the non-urgent weekly checks (50% cheaper) and <b>prompt caching</b> for the
+      fixed system prompt and the user's profile, which repeat on every call of a user.</li>
+      <li>At these prices the LLM is not the main cost driver; analyst time on false alarms is. Keep the
+      model that minimizes false alarms, not the cheapest one.</li>
+    </ul>
+    </body></html>

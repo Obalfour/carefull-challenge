@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    #vis.vega-embed {
+      width: 100%;
+      display: flex;
+    }
+
+    #vis.vega-embed details,
+    #vis.vega-embed details summary {
+      position: relative;
+    }
+  </style>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega@6"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega-lite@6.4.1"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega-embed@7"></script>
+</head>
+<body>
+  <div id="vis"></div>
+  <script>
+    (function(vegaEmbed) {
+      var spec = {"config": {"view": {"continuousWidth": 300, "continuousHeight": 300}}, "hconcat": [{"layer": [{"mark": {"type": "rect"}, "encoding": {"color": {"field": "n", "legend": null, "scale": {"scheme": "blues", "type": "sqrt"}, "type": "quantitative"}, "tooltip": [{"field": "true", "type": "nominal"}, {"field": "predicted", "type": "nominal"}, {"field": "n", "type": "quantitative"}], "x": {"axis": {"labelAngle": 0}, "field": "predicted", "sort": ["benign", "suspicious", "alert"], "title": "Predicted", "type": "nominal"}, "y": {"field": "true", "sort": ["benign", "suspicious", "alert"], "title": "Ground truth", "type": "nominal"}}}, {"mark": {"type": "text", "fontSize": 14}, "encoding": {"color": {"condition": {"test": "(datum.n > 110.5)", "value": "white"}, "value": "black"}, "text": {"field": "n", "type": "quantitative"}, "x": {"axis": {"labelAngle": 0}, "field": "predicted", "sort": ["benign", "suspicious", "alert"], "title": "Predicted", "type": "nominal"}, "y": {"field": "true", "sort": ["benign", "suspicious", "alert"], "title": "Ground truth", "type": "nominal"}}}], "data": {"name": "data-64023c0ec7aa18fdcce9c440cf857d61"}, "height": 220, "title": "Rules only", "width": 220}, {"layer": [{"mark": {"type": "rect"}, "encoding": {"color": {"field": "n", "legend": null, "scale": {"scheme": "blues", "type": "sqrt"}, "type": "quantitative"}, "tooltip": [{"field": "true", "type": "nominal"}, {"field": "predicted", "type": "nominal"}, {"field": "n", "type": "quantitative"}], "x": {"axis": {"labelAngle": 0}, "field": "predicted", "sort": ["benign", "suspicious", "alert"], "title": "Predicted", "type": "nominal"}, "y": {"field": "true", "sort": ["benign", "suspicious", "alert"], "title": "Ground truth", "type": "nominal"}}}, {"mark": {"type": "text", "fontSize": 14}, "encoding": {"color": {"condition": {"test": "(datum.n > 129.5)", "value": "white"}, "value": "black"}, "text": {"field": "n", "type": "quantitative"}, "x": {"axis": {"labelAngle": 0}, "field": "predicted", "sort": ["benign", "suspicious", "alert"], "title": "Predicted", "type": "nominal"}, "y": {"field": "true", "sort": ["benign", "suspicious", "alert"], "title": "Ground truth", "type": "nominal"}}}], "data": {"name": "data-cde897632b2c7c6e379cbd1ad96ff813"}, "height": 220, "title": "Rules + LLM", "width": 220}], "title": "gemini-3.1-flash-lite", "$schema": "https://vega.github.io/schema/vega-lite/v6.4.1.json", "datasets": {"data-64023c0ec7aa18fdcce9c440cf857d61": [{"true": "benign", "predicted": "benign", "n": 221}, {"true": "suspicious", "predicted": "benign", "n": 0}, {"true": "alert", "predicted": "benign", "n": 0}, {"true": "benign", "predicted": "suspicious", "n": 19}, {"true": "suspicious", "predicted": "suspicious", "n": 0}, {"true": "alert", "predicted": "suspicious", "n": 2}, {"true": "benign", "predicted": "alert", "n": 19}, {"true": "suspicious", "predicted": "alert", "n": 2}, {"true": "alert", "predicted": "alert", "n": 28}], "data-cde897632b2c7c6e379cbd1ad96ff813": [{"true": "benign", "predicted": "benign", "n": 259}, {"true": "suspicious", "predicted": "benign", "n": 0}, {"true": "alert", "predicted": "benign", "n": 0}, {"true": "benign", "predicted": "suspicious", "n": 0}, {"true": "suspicious", "predicted": "suspicious", "n": 2}, {"true": "alert", "predicted": "suspicious", "n": 0}, {"true": "benign", "predicted": "alert", "n": 0}, {"true": "suspicious", "predicted": "alert", "n": 0}, {"true": "alert", "predicted": "alert", "n": 30}]}};
+      var embedOpt = {"mode": "vega-lite"};
+
+      function showError(el, error){
+          el.innerHTML = ('<div style="color:red;">'
+                          + '<p>JavaScript Error: ' + error.message + '</p>'
+                          + "<p>This usually means there's a typo in your chart specification. "
+                          + "See the javascript console for the full traceback.</p>"
+                          + '</div>');
+          throw error;
+      }
+      const el = document.getElementById('vis');
+      vegaEmbed("#vis", spec, embedOpt)
+        .catch(error => showError(el, error));
+    })(vegaEmbed);
+
+  </script>
+</body>
+</html>

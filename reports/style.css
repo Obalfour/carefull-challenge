@@ -1,0 +1,129 @@
+/* Shared print stylesheet for the evaluation report and the product writeup. */
+:root {
+  --brand: #4b4acf;
+  --brand-soft: #eceafe;
+  --ink: #1f2330;
+  --muted: #5d6475;
+  --line: #dfe2ea;
+  --good: #1f8a5b;
+  --good-soft: #e3f4ec;
+  --bad: #c2413b;
+  --bad-soft: #fbe9e8;
+  --warn: #9a6400;
+  --warn-soft: #fff4dc;
+}
+
+@page { size: A4; margin: 14mm 15mm 14mm 15mm; }
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 9.3pt;
+  line-height: 1.42;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+header.doc {
+  border-left: 6px solid var(--brand);
+  padding: 2px 0 2px 12px;
+  margin-bottom: 12px;
+}
+header.doc h1 { margin: 0; font-size: 19pt; letter-spacing: -0.3px; }
+header.doc .sub { color: var(--muted); font-size: 9pt; margin-top: 2px; }
+
+h2 {
+  font-size: 12.5pt;
+  color: var(--brand);
+  margin: 16px 0 6px;
+  padding-bottom: 3px;
+  border-bottom: 1.5px solid var(--brand-soft);
+  break-after: avoid;
+}
+h3 { font-size: 10.2pt; margin: 10px 0 4px; break-after: avoid; }
+p { margin: 4px 0 6px; }
+ul { margin: 4px 0 6px; padding-left: 16px; }
+li { margin: 2px 0; }
+b, strong { color: #11131b; }
+code { font-family: Consolas, monospace; font-size: 8.6pt; background: #f2f3f7; padding: 0 3px; border-radius: 3px; }
+
+.page-break { break-before: page; }
+.avoid-break { break-inside: avoid; }
+
+/* KPI cards */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0 10px; }
+.kpi {
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--brand);
+  border-radius: 6px;
+  padding: 7px 9px 8px;
+  background: #fff;
+}
+.kpi .value { font-size: 19pt; font-weight: 700; line-height: 1.1; }
+.kpi .label { font-size: 8.4pt; color: var(--muted); margin-top: 2px; }
+.kpi.good { border-top-color: var(--good); }
+.kpi.good .value { color: var(--good); }
+.kpi.warn { border-top-color: var(--warn); }
+
+/* Callouts */
+.callout {
+  border-radius: 6px;
+  padding: 7px 11px;
+  margin: 8px 0;
+  border-left: 5px solid var(--brand);
+  background: var(--brand-soft);
+  break-inside: avoid;
+}
+.callout.warn { border-left-color: #e0a100; background: var(--warn-soft); }
+.callout.good { border-left-color: var(--good); background: var(--good-soft); }
+.callout.bad { border-left-color: var(--bad); background: var(--bad-soft); }
+.callout .title { font-weight: 700; margin-bottom: 2px; }
+
+/* Funnel */
+.funnel { display: flex; align-items: stretch; gap: 0; margin: 8px 0 10px; }
+.funnel .step {
+  flex: 1;
+  text-align: center;
+  padding: 7px 6px;
+  color: #fff;
+  background: var(--brand);
+  clip-path: polygon(0 0, 92% 0, 100% 50%, 92% 100%, 0 100%, 8% 50%);
+}
+.funnel .step:first-child { clip-path: polygon(0 0, 92% 0, 100% 50%, 92% 100%, 0 100%); }
+.funnel .step:nth-child(2) { background: #6765dc; }
+.funnel .step:nth-child(3) { background: #8381e6; }
+.funnel .step:nth-child(4) { background: var(--good); }
+.funnel .n { font-size: 15pt; font-weight: 700; line-height: 1.1; }
+.funnel .t { font-size: 8pt; opacity: 0.95; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; margin: 6px 0 8px; font-size: 8.8pt; break-inside: avoid; }
+th {
+  text-align: left;
+  background: #f4f5f9;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 8.2pt;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+th, td { padding: 4px 7px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.highlight td { background: var(--good-soft); font-weight: 600; }
+tr.muted td { color: var(--muted); }
+.tag { display: inline-block; padding: 0 6px; border-radius: 9px; font-size: 8pt; font-weight: 600; }
+.tag.alert { background: var(--bad-soft); color: var(--bad); }
+.tag.suspicious { background: var(--warn-soft); color: var(--warn); }
+.tag.benign { background: var(--good-soft); color: var(--good); }
+.tag.na { background: #eef0f4; color: var(--muted); }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.figure { text-align: center; margin: 6px 0; break-inside: avoid; }
+.figure img { max-width: 100%; }
+.caption { font-size: 8.2pt; color: var(--muted); }
+.quote { font-style: italic; color: #333a4d; }
+.small { font-size: 8.4pt; color: var(--muted); }
+footer.doc { margin-top: 12px; font-size: 8pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 5px; }
