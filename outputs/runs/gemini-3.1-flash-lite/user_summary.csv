@@ -1,0 +1,6 @@
+user_id,name,alert_user,n_alert,n_suspicious,n_needs_review,patterns,amount_at_risk,top_reason
+USR-001,Margaret Thompson,True,6,2,0,escalating_transfers,6950.0,"Margaret is sending rapidly increasing amounts of money via Zelle to a new contact, Kevin Richards. This pattern of escalating transfers is highly concerning and deviates significantly from her established, modest spending habits."
+USR-002,Robert Chen,False,0,0,0,,0.0,
+USR-003,Dorothy Williams,True,12,0,0,money_mule,52600.0,"Dorothy's account is being used as a pass-through for large, suspicious deposits from unknown businesses, which are then quickly transferred to an individual named Dmitri Volkov. This is a classic money mule scam and poses a high risk to her financial security."
+USR-004,Frank Martinez,False,0,0,0,,0.0,
+USR-005,Helen Park,True,12,0,0,out_of_profile_spending,5600.0,"Helen's account is showing signs of a severe compromise. Following a series of suspicious international charges in Spain, this new transaction in Thailand is highly likely to be fraudulent."

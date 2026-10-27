@@ -1,0 +1,28 @@
+{
+  "model": "gemini-3.1-flash-lite",
+  "finished_at": "2026-10-21T04:43:42",
+  "wall_time_s": 247.6,
+  "n_transactions": 291,
+  "n_flagged_by_rules": 70,
+  "n_llm_calls": 94,
+  "n_llm_failures": 0,
+  "detection_config": {
+    "rolling_window": "30D",
+    "rolling_multiplier": 1.5,
+    "escalation_lookback": "7D",
+    "mule_window_hours": 72,
+    "mule_ratio_min": 0.85,
+    "mule_ratio_max": 1.0,
+    "weekly_baseline_weeks": 4,
+    "weekly_min_history_weeks": 2,
+    "weekly_multiplier": 1.5,
+    "weekly_only_new_merchants": true
+  },
+  "validation_config": {
+    "min_confidence": 0.6,
+    "baseline_days": 90,
+    "recent_history_days": 30,
+    "max_recent_transactions": 25,
+    "max_workers": 8
+  }
+}
