@@ -1,0 +1,11 @@
+.git
+.env
+.vscode
+.claude
+**/__pycache__
+**/.ipynb_checkpoints
+.pytest_cache
+outputs/cache
+docs
+clases
+code.zip
