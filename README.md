@@ -1,6 +1,6 @@
 # Carefull challenge: LLM-powered transaction alert pipeline
 
-**Live demo: [obalfour.github.io/carefull-challenge](https://obalfour.github.io/carefull-challenge/)**, a results explorer for the last run: who is alerted, each transaction on a timeline, and the LLM's
+**Live demo: [oli.com.ar/carefull-challenge](https://oli.com.ar/carefull-challenge/)**, a results explorer for the last run: who is alerted, each transaction on a timeline, and the LLM's
 reasoning behind every decision. It is a static page; nothing runs live and no API key is involved.
 
 A pipeline that reads bank transactions of older adults, enriches them, flags suspicious activity with
